@@ -1,14 +1,20 @@
 package main
 
 import (
+	"errors"
 	"os"
-	"os/signal"
-	"syscall"
 
+	"github.com/abiosoft/ishell"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/al1img/lwm2mTestServer/bootstrap"
 )
+
+/*******************************************************************************
+ * Variables
+ ******************************************************************************/
+
+var errWrongArgCount = errors.New("wrong argument count")
 
 /*******************************************************************************
  * Init
@@ -28,12 +34,44 @@ func init() {
  ******************************************************************************/
 
 func main() {
-	b := bootstrap.New(":5685")
+	shell := ishell.New()
 
+	shell.Println("lwm2m Test Server")
+
+	b := bootstrap.New(":5685")
 	b.Start()
 
-	// Handle SIGTERM
-	terminateChannel := make(chan os.Signal, 1)
-	signal.Notify(terminateChannel, os.Interrupt, syscall.SIGTERM)
-	<-terminateChannel
+	bootstrapCmd := &ishell.Cmd{Name: "bootstrap", Help: "bootstrap commands"}
+
+	bootstrapCmd.AddCmd(&ishell.Cmd{
+		Name: "discover",
+		Help: "bootstrap discover <client> <objectId>",
+		Completer: func(args []string) []string {
+			if len(args) == 0 {
+				return b.GetClients()
+			}
+			return []string{}
+		},
+		Func: func(context *ishell.Context) {
+			if len(context.Args) != 2 {
+				context.Err(errWrongArgCount)
+				return
+			}
+			result, err := b.Discover(context.Args[0], context.Args[1])
+			if err != nil {
+				context.Err(err)
+				return
+			}
+			context.Println(result)
+		}})
+
+	bootstrapCmd.AddCmd(&ishell.Cmd{Name: "read", Help: "bootstrap read"})
+	bootstrapCmd.AddCmd(&ishell.Cmd{Name: "write", Help: "bootstrap write"})
+	bootstrapCmd.AddCmd(&ishell.Cmd{Name: "delete", Help: "bootstrap delete"})
+	bootstrapCmd.AddCmd(&ishell.Cmd{Name: "finish", Help: "bootstrap finish"})
+
+	shell.AddCmd(bootstrapCmd)
+
+	shell.Run()
+	shell.Close()
 }
