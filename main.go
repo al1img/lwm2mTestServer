@@ -1,15 +1,39 @@
 package main
 
 import (
-	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/al1img/lwm2mTestServer/registration"
-	coap "github.com/dustin/go-coap"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/al1img/lwm2mTestServer/bootstrap"
 )
 
-func main() {
-	mux := coap.NewServeMux()
-	mux.Handle("/rd", coap.FuncHandler(registration.Handler))
+/*******************************************************************************
+ * Init
+ ******************************************************************************/
 
-	log.Fatal(coap.ListenAndServe("udp", ":5683", mux))
+func init() {
+	log.SetFormatter(&log.TextFormatter{
+		DisableTimestamp: false,
+		TimestampFormat:  "2006-01-02 15:04:05.000",
+		FullTimestamp:    true})
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.DebugLevel)
+}
+
+/*******************************************************************************
+ * Main
+ ******************************************************************************/
+
+func main() {
+	b := bootstrap.New(":5685")
+
+	b.Start()
+
+	// Handle SIGTERM
+	terminateChannel := make(chan os.Signal, 1)
+	signal.Notify(terminateChannel, os.Interrupt, syscall.SIGTERM)
+	<-terminateChannel
 }
