@@ -1,39 +1,33 @@
 package bootstrap
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strings"
+	"time"
 
-	"github.com/dustin/go-coap"
+	"github.com/go-ocf/go-coap"
 	log "github.com/sirupsen/logrus"
 )
-
-const maxPktLen = 1500
 
 // Instance bootstrap instance
 type Instance struct {
 	mux  *coap.ServeMux
 	addr string
 
-	clients map[string]client
-}
-
-type client struct {
-	conn *net.UDPConn
-	addr *net.UDPAddr
-	buf  []byte
+	clients map[string]*coap.ClientConn
 }
 
 var errClientNotFound = errors.New("client not found")
 
 // New creates new bootstrap server
 func New(addr string) (instance *Instance) {
-	instance = &Instance{mux: coap.NewServeMux(), addr: addr, clients: make(map[string]client)}
+	instance = &Instance{mux: coap.NewServeMux(), addr: addr, clients: make(map[string]*coap.ClientConn)}
 
 	log.Debugf("New bootstrap server: %s", instance.addr)
 
-	instance.mux.Handle("/bs", coap.FuncHandler(instance.bootstrapHandler))
+	instance.mux.Handle("/bs", coap.HandlerFunc(instance.bootstrapHandler))
 
 	return instance
 }
@@ -65,65 +59,71 @@ func (instance *Instance) Discover(name, path string) (result string, err error)
 		return "", errClientNotFound
 	}
 
-	request := coap.Message{
-		Type: coap.Confirmable,
-		Code: coap.GET}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
-	if path != "/" {
-		request.SetPathString(path)
-	}
-
-	request.SetOption(coap.Accept, coap.AppLinkFormat)
-
-	response, err := client.send(request)
+	req, err := client.NewGetRequest(path)
 	if err != nil {
 		return "", err
 	}
 
-	if response.Code != coap.Content {
-		return "", errors.New(response.Code.String())
+	req.AddOption(coap.Accept, coap.AppLinkFormat)
+
+	rsp, err := client.ExchangeWithContext(ctx, req)
+	if err != nil {
+		return "", err
 	}
 
-	return string(response.Payload), nil
+	if rsp.Code() != coap.Content {
+		return "", errors.New(rsp.Code().String())
+	}
+
+	return "", nil
 }
 
-func (instance *Instance) bootstrapHandler(conn *net.UDPConn, addr *net.UDPAddr, message *coap.Message) *coap.Message {
+func (instance *Instance) bootstrapHandler(w coap.ResponseWriter, req *coap.Request) {
+	if req.Msg.Code() != coap.POST {
+		log.Errorf("Wrong request code: %s", req.Msg.Code().String())
+		return
+	}
+
 	var ep string
 
-	queries := message.Options(coap.URIQuery)
+	queries := req.Msg.Query()
 
 	for _, query := range queries {
-		if strings.HasPrefix(query.(string), "ep=") {
-			ep = strings.TrimPrefix(query.(string), "ep=")
+		if strings.HasPrefix(query, "ep=") {
+			ep = strings.TrimPrefix(query, "ep=")
 		}
 	}
 
 	log.Infof("Bootstrap request ep = %s", ep)
 
-	instance.clients[ep] = client{conn, addr, make([]byte, maxPktLen)}
+	ctx, cancel := context.WithTimeout(req.Ctx, time.Second)
+	defer cancel()
 
-	response := &coap.Message{
-		Type:      coap.Acknowledgement,
-		Code:      coap.Changed,
-		MessageID: message.MessageID,
-		Token:     message.Token}
+	w.SetCode(coap.Changed)
 
-	return response
+	if _, err := w.WriteWithContext(ctx, nil); err != nil {
+		log.Errorf("Cannot send response: %s", err)
+	}
+
+	instance.clients[ep] = req.Client
+
+	/*
+		rsp := w.NewResponse(coap.Changed)
+		rsp.SetType(coap.Acknowledgement)
+		rsp.SetMessageID(req.Msg.MessageID())
+		rsp.SetToken(req.Msg.Token())
+
+		if err := w.WriteMsgWithContext(ctx, rsp); err != nil {
+			log.Errorf("Cannot send response: %s", err)
+		}
+	*/
 }
 
-func (client *client) send(request coap.Message) (response *coap.Message, err error) {
-	if err = coap.Transmit(client.conn, client.addr, request); err != nil {
-		return nil, err
-	}
+func (instance *Instance) receiveHandler(conn *net.UDPConn, addr *net.UDPAddr, message *coap.Message) *coap.Message {
+	log.Info("Message received")
 
-	if !request.IsConfirmable() {
-		return nil, nil
-	}
-
-	message, err := coap.Receive(client.conn, client.buf)
-	if err != nil {
-		return nil, err
-	}
-
-	return &message, nil
+	return nil
 }
