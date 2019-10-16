@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"net"
 	"strings"
 	"time"
 
@@ -213,21 +212,4 @@ func (instance *Instance) bootstrapHandler(w coap.ResponseWriter, req *coap.Requ
 	}
 
 	instance.clients[ep] = req.Client
-
-	/*
-		rsp := w.NewResponse(coap.Changed)
-		rsp.SetType(coap.Acknowledgement)
-		rsp.SetMessageID(req.Msg.MessageID())
-		rsp.SetToken(req.Msg.Token())
-
-		if err := w.WriteMsgWithContext(ctx, rsp); err != nil {
-			log.Errorf("Cannot send response: %s", err)
-		}
-	*/
-}
-
-func (instance *Instance) receiveHandler(conn *net.UDPConn, addr *net.UDPAddr, message *coap.Message) *coap.Message {
-	log.Info("Message received")
-
-	return nil
 }
