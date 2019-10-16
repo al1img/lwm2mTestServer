@@ -38,8 +38,8 @@ func main() {
 
 	shell.Println("lwm2m Test Server")
 
-	b := bootstrap.New(":5685")
-	b.Start()
+	bootstrapServer := bootstrap.New(":5685")
+	bootstrapServer.Start()
 
 	bootstrapCmd := &ishell.Cmd{Name: "bootstrap", Help: "bootstrap commands"}
 
@@ -48,7 +48,7 @@ func main() {
 		Help: "bootstrap discover <client> <path>",
 		Completer: func(args []string) []string {
 			if len(args) == 0 {
-				return b.GetClients()
+				return bootstrapServer.GetClients()
 			}
 			return []string{}
 		},
@@ -57,7 +57,7 @@ func main() {
 				context.Err(errWrongArgCount)
 				return
 			}
-			result, err := b.Discover(context.Args[0], context.Args[1])
+			result, err := bootstrapServer.Discover(context.Args[0], context.Args[1])
 			if err != nil {
 				context.Err(err)
 				return
@@ -70,7 +70,7 @@ func main() {
 		Help: "bootstrap read <client> <path>",
 		Completer: func(args []string) []string {
 			if len(args) == 0 {
-				return b.GetClients()
+				return bootstrapServer.GetClients()
 			}
 			return []string{}
 		},
@@ -79,7 +79,7 @@ func main() {
 				context.Err(errWrongArgCount)
 				return
 			}
-			result, err := b.Read(context.Args[0], context.Args[1])
+			result, err := bootstrapServer.Read(context.Args[0], context.Args[1])
 			if err != nil {
 				context.Err(err)
 				return
@@ -92,7 +92,7 @@ func main() {
 		Help: "bootstrap write <client> <path> <data>",
 		Completer: func(args []string) []string {
 			if len(args) == 0 {
-				return b.GetClients()
+				return bootstrapServer.GetClients()
 			}
 			return []string{}
 		},
@@ -101,7 +101,7 @@ func main() {
 				context.Err(errWrongArgCount)
 				return
 			}
-			err := b.Write(context.Args[0], context.Args[1], []byte(context.Args[2]))
+			err := bootstrapServer.Write(context.Args[0], context.Args[1], []byte(context.Args[2]))
 			if err != nil {
 				context.Err(err)
 				return
@@ -113,7 +113,7 @@ func main() {
 		Help: "bootstrap delete <client> <path>",
 		Completer: func(args []string) []string {
 			if len(args) == 0 {
-				return b.GetClients()
+				return bootstrapServer.GetClients()
 			}
 			return []string{}
 		},
@@ -122,7 +122,7 @@ func main() {
 				context.Err(errWrongArgCount)
 				return
 			}
-			err := b.Delete(context.Args[0], context.Args[1])
+			err := bootstrapServer.Delete(context.Args[0], context.Args[1])
 			if err != nil {
 				context.Err(err)
 				return
@@ -134,7 +134,7 @@ func main() {
 		Help: "bootstrap finish <client>",
 		Completer: func(args []string) []string {
 			if len(args) == 0 {
-				return b.GetClients()
+				return bootstrapServer.GetClients()
 			}
 			return []string{}
 		},
@@ -143,7 +143,7 @@ func main() {
 				context.Err(errWrongArgCount)
 				return
 			}
-			err := b.Finish(context.Args[0])
+			err := bootstrapServer.Finish(context.Args[0])
 			if err != nil {
 				context.Err(err)
 				return
