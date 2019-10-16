@@ -45,7 +45,7 @@ func main() {
 
 	bootstrapCmd.AddCmd(&ishell.Cmd{
 		Name: "discover",
-		Help: "bootstrap discover <client> <objectId>",
+		Help: "bootstrap discover <client> <path>",
 		Completer: func(args []string) []string {
 			if len(args) == 0 {
 				return b.GetClients()
@@ -65,10 +65,90 @@ func main() {
 			context.Println(result)
 		}})
 
-	bootstrapCmd.AddCmd(&ishell.Cmd{Name: "read", Help: "bootstrap read"})
-	bootstrapCmd.AddCmd(&ishell.Cmd{Name: "write", Help: "bootstrap write"})
-	bootstrapCmd.AddCmd(&ishell.Cmd{Name: "delete", Help: "bootstrap delete"})
-	bootstrapCmd.AddCmd(&ishell.Cmd{Name: "finish", Help: "bootstrap finish"})
+	bootstrapCmd.AddCmd(&ishell.Cmd{
+		Name: "read",
+		Help: "bootstrap read <client> <path>",
+		Completer: func(args []string) []string {
+			if len(args) == 0 {
+				return b.GetClients()
+			}
+			return []string{}
+		},
+		Func: func(context *ishell.Context) {
+			if len(context.Args) != 2 {
+				context.Err(errWrongArgCount)
+				return
+			}
+			result, err := b.Read(context.Args[0], context.Args[1])
+			if err != nil {
+				context.Err(err)
+				return
+			}
+			context.Println(result)
+		}})
+
+	bootstrapCmd.AddCmd(&ishell.Cmd{
+		Name: "write",
+		Help: "bootstrap write <client> <path> <data>",
+		Completer: func(args []string) []string {
+			if len(args) == 0 {
+				return b.GetClients()
+			}
+			return []string{}
+		},
+		Func: func(context *ishell.Context) {
+			if len(context.Args) != 3 {
+				context.Err(errWrongArgCount)
+				return
+			}
+			err := b.Write(context.Args[0], context.Args[1], []byte(context.Args[2]))
+			if err != nil {
+				context.Err(err)
+				return
+			}
+		}})
+
+	bootstrapCmd.AddCmd(&ishell.Cmd{
+		Name: "delete",
+		Help: "bootstrap delete <client> <path>",
+		Completer: func(args []string) []string {
+			if len(args) == 0 {
+				return b.GetClients()
+			}
+			return []string{}
+		},
+		Func: func(context *ishell.Context) {
+			if len(context.Args) != 2 {
+				context.Err(errWrongArgCount)
+				return
+			}
+			err := b.Delete(context.Args[0], context.Args[1])
+			if err != nil {
+				context.Err(err)
+				return
+			}
+		}})
+
+	bootstrapCmd.AddCmd(&ishell.Cmd{
+		Name: "finish",
+		Help: "bootstrap finish <client>",
+		Completer: func(args []string) []string {
+			if len(args) == 0 {
+				return b.GetClients()
+			}
+			return []string{}
+		},
+		Func: func(context *ishell.Context) {
+			if len(context.Args) != 1 {
+				context.Err(errWrongArgCount)
+				return
+			}
+			err := b.Finish(context.Args[0])
+			if err != nil {
+				context.Err(err)
+				return
+			}
+		}})
 
 	shell.AddCmd(bootstrapCmd)
 
