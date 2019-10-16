@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/al1img/lwm2mTestServer/bootstrap"
+	"github.com/al1img/lwm2mTestServer/lwm2m"
 )
 
 /*******************************************************************************
@@ -40,6 +41,9 @@ func main() {
 
 	bootstrapServer := bootstrap.New(":5685")
 	bootstrapServer.Start()
+
+	lwm2mServer := lwm2m.New(":5683")
+	lwm2mServer.Start()
 
 	bootstrapCmd := &ishell.Cmd{Name: "bootstrap", Help: "bootstrap commands"}
 

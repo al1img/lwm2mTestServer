@@ -11,6 +11,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+/*******************************************************************************
+ * Types
+ ******************************************************************************/
+
 // Instance bootstrap instance
 type Instance struct {
 	mux  *coap.ServeMux
@@ -19,7 +23,15 @@ type Instance struct {
 	clients map[string]*coap.ClientConn
 }
 
+/*******************************************************************************
+ * Vars
+ ******************************************************************************/
+
 var errClientNotFound = errors.New("client not found")
+
+/*******************************************************************************
+ * Public
+ ******************************************************************************/
 
 // New creates new bootstrap server
 func New(addr string) (instance *Instance) {
@@ -183,6 +195,10 @@ func (instance *Instance) Finish(name string) (err error) {
 
 	return nil
 }
+
+/*******************************************************************************
+ * Private
+ ******************************************************************************/
 
 func (instance *Instance) bootstrapHandler(w coap.ResponseWriter, req *coap.Request) {
 	if req.Msg.Code() != coap.POST {
