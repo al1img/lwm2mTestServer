@@ -156,6 +156,54 @@ func main() {
 
 	shell.AddCmd(bootstrapCmd)
 
+	deviceCmd := &ishell.Cmd{Name: "device", Help: "device commands"}
+
+	deviceCmd.AddCmd(&ishell.Cmd{
+		Name: "discover",
+		Help: "device discover <client> <path>",
+		Completer: func(args []string) []string {
+			if len(args) == 0 {
+				return lwm2mServer.GetClients()
+			}
+			return []string{}
+		},
+		Func: func(context *ishell.Context) {
+			if len(context.Args) != 2 {
+				context.Err(errWrongArgCount)
+				return
+			}
+			result, err := lwm2mServer.Discover(context.Args[0], context.Args[1])
+			if err != nil {
+				context.Err(err)
+				return
+			}
+			context.Println(result)
+		}})
+
+	deviceCmd.AddCmd(&ishell.Cmd{
+		Name: "read",
+		Help: "device read <client> <path>",
+		Completer: func(args []string) []string {
+			if len(args) == 0 {
+				return lwm2mServer.GetClients()
+			}
+			return []string{}
+		},
+		Func: func(context *ishell.Context) {
+			if len(context.Args) != 2 {
+				context.Err(errWrongArgCount)
+				return
+			}
+			result, err := lwm2mServer.Read(context.Args[0], context.Args[1])
+			if err != nil {
+				context.Err(err)
+				return
+			}
+			context.Println(result)
+		}})
+
+	shell.AddCmd(deviceCmd)
+
 	shell.Run()
 	shell.Close()
 }

@@ -110,7 +110,7 @@ func (instance *Instance) Read(name, path string) (result string, err error) {
 		return "", err
 	}
 
-	req.AddOption(coap.Accept, coap.AppLwm2mJSON)
+	req.AddOption(coap.Accept, 110)
 
 	rsp, err := client.ExchangeWithContext(ctx, req)
 	if err != nil {

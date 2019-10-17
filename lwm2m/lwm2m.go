@@ -31,6 +31,7 @@ type Client struct {
 	lt           int
 	timer        *time.Timer
 	closeChannel chan bool
+	objects      string
 }
 
 /*******************************************************************************
@@ -72,6 +73,68 @@ func (instance *Instance) GetClients() (clients []string) {
 	return clients
 }
 
+// Discover device discover
+func (instance *Instance) Discover(name, path string) (result string, err error) {
+	log.Debugf("Device discover, client: %s, path: %s", name, path)
+
+	client, ok := instance.clients[name]
+	if !ok {
+		return "", errClientNotFound
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	req, err := client.conn.NewGetRequest(path)
+	if err != nil {
+		return "", err
+	}
+
+	req.AddOption(coap.Accept, coap.AppLinkFormat)
+
+	rsp, err := client.conn.ExchangeWithContext(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	if rsp.Code() != coap.Content {
+		return "", errors.New(rsp.Code().String())
+	}
+
+	return string(rsp.Payload()), nil
+}
+
+// Read device read
+func (instance *Instance) Read(name, path string) (result string, err error) {
+	log.Debugf("Device read, client: %s, path: %s", name, path)
+
+	client, ok := instance.clients[name]
+	if !ok {
+		return "", errClientNotFound
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	req, err := client.conn.NewGetRequest(path)
+	if err != nil {
+		return "", err
+	}
+
+	req.AddOption(coap.Accept, 110)
+
+	rsp, err := client.conn.ExchangeWithContext(ctx, req)
+	if err != nil {
+		return "", err
+	}
+
+	if rsp.Code() != coap.Content {
+		return "", errors.New(rsp.Code().String())
+	}
+
+	return string(rsp.Payload()), nil
+}
+
 /*******************************************************************************
  * Private
  ******************************************************************************/
@@ -110,7 +173,9 @@ func (instance *Instance) registrationHandler(w coap.ResponseWriter, req *coap.R
 		log.Errorf("Can't create client: %s", err)
 		rsp.SetCode(coap.BadRequest)
 	} else {
+		instance.clients[ep].objects = string(req.Msg.Payload())
 		rsp.AddOption(coap.LocationPath, instance.clients[ep].location)
+		log.Infof("Objects %s", instance.clients[ep].objects)
 	}
 
 	ctx, cancel := context.WithTimeout(req.Ctx, time.Second)
@@ -144,6 +209,10 @@ func (instance *Instance) registrationUpdate(ep string, w coap.ResponseWriter, r
 		instance.clients[ep].timer.Reset(time.Duration(instance.clients[ep].lt) * time.Second)
 
 		log.Infof("Registration update ep = %s, lt = %d", ep, instance.clients[ep].lt)
+		if len(req.Msg.Payload()) > 0 {
+			instance.clients[ep].objects = string(req.Msg.Payload())
+			log.Infof("Objects %s", instance.clients[ep].objects)
+		}
 
 	case coap.DELETE:
 		log.Infof("Deregistration ep = %s", ep)
