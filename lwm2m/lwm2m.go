@@ -1,6 +1,7 @@
 package lwm2m
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"strconv"
@@ -133,6 +134,30 @@ func (instance *Instance) Read(name, path string) (result string, err error) {
 	}
 
 	return string(rsp.Payload()), nil
+}
+
+// Write device write
+func (instance *Instance) Write(name, path string, data []byte) (err error) {
+	log.Debugf("Device write, client: %s, path: %s", name, path)
+
+	client, ok := instance.clients[name]
+	if !ok {
+		return errClientNotFound
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	rsp, err := client.conn.PutWithContext(ctx, path, 110, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+
+	if rsp.Code() != coap.Changed {
+		return errors.New(rsp.Code().String())
+	}
+
+	return nil
 }
 
 /*******************************************************************************

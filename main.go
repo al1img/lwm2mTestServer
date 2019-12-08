@@ -202,6 +202,27 @@ func main() {
 			context.Println(result)
 		}})
 
+	deviceCmd.AddCmd(&ishell.Cmd{
+		Name: "write",
+		Help: "device write <client> <path> <data>",
+		Completer: func(args []string) []string {
+			if len(args) == 0 {
+				return lwm2mServer.GetClients()
+			}
+			return []string{}
+		},
+		Func: func(context *ishell.Context) {
+			if len(context.Args) != 3 {
+				context.Err(errWrongArgCount)
+				return
+			}
+			err := lwm2mServer.Write(context.Args[0], context.Args[1], []byte(context.Args[2]))
+			if err != nil {
+				context.Err(err)
+				return
+			}
+		}})
+
 	shell.AddCmd(deviceCmd)
 
 	shell.Run()
